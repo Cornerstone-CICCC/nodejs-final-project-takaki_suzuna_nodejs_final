@@ -1,6 +1,12 @@
+import Board from "./components/board"
+
 function App() {
   return (
-    <h1 className="text-3xl font-bold text-blue-600">Tailwind is working</h1>
+    <main>
+      <h1 className="text-3xl font-bold">DOTS & BOXES</h1>
+      <span className="text-3x1">by Takaki, Suzuna and Carlos</span>
+      <Board />
+    </main>
   );
 }
 
