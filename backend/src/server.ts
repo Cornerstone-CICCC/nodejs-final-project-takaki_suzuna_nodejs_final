@@ -1,10 +1,14 @@
 import express from "express";
 import mongoose from "mongoose";
 import env from "./config/env";
+import cookieParser from "cookie-parser";
+import authRouter from "./routes/auth/auth.routes";
 
 const app = express();
 
 app.use(express.json());
+app.use(cookieParser());
+app.use("/auth", authRouter);
 
 const PORT = env.PORT;
 const MONGO_DB = env.DATABASE_URL;

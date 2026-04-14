@@ -8,4 +8,8 @@ async function findUser(id: string) {
   return await User.findById(id);
 }
 
-export default { insertUser, findUser };
+async function findUserByEmail(email: string) {
+  return await User.findOne({ email });
+}
+
+export default { insertUser, findUser, findUserByEmail };
