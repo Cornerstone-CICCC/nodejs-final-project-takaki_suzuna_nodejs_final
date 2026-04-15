@@ -148,7 +148,9 @@ export function registerGameSocketHandlers(io: Server) {
 
       if (!existingRoom) {
         const newRoom = buildRoomState(normalizedRoomCode, user);
+        // { code: roomCode, hostUserId: host.id, players: [host], status: "waiting",};
         activeRooms.set(normalizedRoomCode, newRoom);
+        // {"ROOMCODE123": { code: roomCode, hostUserId: host.id, players: [host], status: "waiting"}}
         authedSocket.join(normalizedRoomCode);
         authedSocket.emit("room:joined", newRoom);
         return;
