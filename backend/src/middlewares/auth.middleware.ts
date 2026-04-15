@@ -6,7 +6,7 @@ import { AuthedRequest, JwtPayload } from "../types/auth.types";
 export default function authMiddleware(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   const token = req.cookies?.session;
 

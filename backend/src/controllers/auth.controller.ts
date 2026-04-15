@@ -68,7 +68,7 @@ async function signup(req: Request, res: Response) {
 }
 
 // ##########################################################################################
-//                                      SIGN UP
+//                                      LOGIN
 // ##########################################################################################
 
 async function login(req: Request, res: Response) {
@@ -105,11 +105,17 @@ async function login(req: Request, res: Response) {
   }
 }
 
+// ##########################################################################################
+//                                      LOGOUT
+// ##########################################################################################
 async function logout(req: Request, res: Response) {
   res.clearCookie(COOKIE_NAME, COOKIE_OPTIONS);
   return res.status(200).json({ success: true, message: "Logged out" });
 }
 
+// ##########################################################################################
+//                                      GET ME
+// ##########################################################################################
 async function getMe(req: AuthedRequest, res: Response) {
   try {
     if (!req.userId) {
