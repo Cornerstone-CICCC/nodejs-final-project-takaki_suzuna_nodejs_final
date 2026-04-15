@@ -10,7 +10,7 @@ import { AuthedRequest } from "../types/auth.types";
 const COOKIE_NAME = "session";
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: false,
+  secure: process.env.NODE_ENV === "production",
   sameSite: "lax" as const,
 };
 

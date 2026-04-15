@@ -1,7 +1,18 @@
 import { Request, Response } from "express";
 import { AuthedRequest } from "../../types/auth.types";
-import roomService from "../../services/room/room.service";
+import roomService, {
+  RoomServiceError,
+} from "../../services/room/room.service";
 import authServices from "../../services/auth/auth.services";
+
+function handleRoomError(err: unknown, res: Response) {
+  if (err instanceof RoomServiceError) {
+    return res.status(err.statusCode).json({ message: err.message });
+  }
+
+  console.error(err);
+  return res.status(500).json({ message: "Server error" });
+}
 
 // createRoom
 // * get user from request (from auth middleware)
@@ -24,10 +35,9 @@ const createRoom = async (req: AuthedRequest, res: Response) => {
       userId: user._id.toString(),
       username: user.username,
     });
-    res.status(201).json(room);
+    return res.status(201).json(room);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    return handleRoomError(err, res);
   }
 };
 
@@ -58,10 +68,9 @@ const joinRoom = async (req: AuthedRequest, res: Response) => {
       userId: user._id.toString(),
       username: user.username,
     });
-    res.status(200).json(room);
+    return res.status(200).json(room);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    return handleRoomError(err, res);
   }
 };
 
@@ -78,10 +87,9 @@ const getRoomInfo = async (req: Request, res: Response) => {
     }
 
     const room = roomService.roomInfo(roomCode as string);
-    res.status(200).json(room);
+    return res.status(200).json(room);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    return handleRoomError(err, res);
   }
 };
 

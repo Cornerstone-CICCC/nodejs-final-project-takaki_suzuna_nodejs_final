@@ -5,7 +5,7 @@ import authMiddleware from "../../middlewares/auth.middleware";
 const roomRouter = Router();
 
 roomRouter.post("/", authMiddleware, roomController.createRoom);
-roomRouter.post("/", authMiddleware, roomController.createRoom);
+roomRouter.post("/join", authMiddleware, roomController.joinRoom);
 roomRouter.get("/:roomCode", roomController.getRoomInfo);
 
 export default roomRouter;

@@ -1,7 +1,7 @@
-type RoomStatus = "waiting" | "full" | "playing";
+export type RoomStatus = "waiting" | "full" | "playing" | "finished";
 
 export interface Player {
-  userId: string;
+  id: string;
   username: string;
 }
 
@@ -11,4 +11,5 @@ export interface Room {
   maxPlayers: number;
   status: RoomStatus;
   createdAt: Date;
+  hostUserId: string;
 }

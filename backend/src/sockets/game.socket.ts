@@ -2,22 +2,16 @@ import jwt from "jsonwebtoken";
 import { Server, type Socket } from "socket.io";
 import env from "../config/env";
 import authServices from "../services/auth/auth.services";
+import roomService from "../services/room/room.service";
 import { createInitialGameState } from "../utils/board";
 import { GameLogicError, applyMove } from "../utils/gameLogic";
 import {
   type GameState,
-  type GameStatus,
   type Player,
 } from "../types/game.types";
+import { type Room as RoomState } from "../models/room/room.model";
 
 type SocketUser = Player;
-
-type RoomState = {
-  code: string;
-  hostUserId: string;
-  players: Player[];
-  status: GameStatus;
-};
 
 type AuthenticatedSocket = Socket & {
   data: Socket["data"] & { user?: SocketUser };
@@ -105,13 +99,64 @@ function assertAuthenticatedUser(socket: AuthenticatedSocket): SocketUser {
   return user;
 }
 
-function buildRoomState(roomCode: string, host: Player): RoomState {
-  return {
-    code: roomCode,
-    hostUserId: host.id,
-    players: [host],
-    status: "waiting",
-  };
+function syncActiveRoom(room: RoomState | null) {
+  if (!room) {
+    return;
+  }
+
+  activeRooms.set(room.roomCode, room);
+}
+
+async function handleRoomDisconnect(
+  io: Server,
+  socket: AuthenticatedSocket,
+  user: SocketUser,
+) {
+  const joinedRoomCodes = [...socket.rooms].filter((room) => room !== socket.id);
+
+  for (const roomCode of joinedRoomCodes) {
+    const normalizedRoomCode = roomService.normalizeCode(roomCode);
+    const socketsInRoom = await io.in(normalizedRoomCode).fetchSockets();
+    const hasSameUserConnectedElsewhere = socketsInRoom.some(
+      (roomSocket) => {
+        const remoteUser = roomSocket.data.user as SocketUser | undefined;
+        return roomSocket.id !== socket.id && remoteUser?.id === user.id;
+      },
+    );
+
+    if (hasSameUserConnectedElsewhere) {
+      continue;
+    }
+
+    const updatedRoom = roomService.removePlayer(normalizedRoomCode, user.id);
+
+    if (!updatedRoom) {
+      activeRooms.delete(normalizedRoomCode);
+      activeGames.delete(normalizedRoomCode);
+      continue;
+    }
+
+    syncActiveRoom(updatedRoom);
+
+    if (activeGames.has(normalizedRoomCode)) {
+      activeGames.delete(normalizedRoomCode);
+      roomService.updateStatus(normalizedRoomCode, "waiting");
+      const resetRoom = roomService.roomInfo(normalizedRoomCode);
+      syncActiveRoom(resetRoom);
+      io.to(normalizedRoomCode).emit("game:error", {
+        message: "A player disconnected. The game has been reset.",
+      });
+      emitRoomState(io, normalizedRoomCode, resetRoom);
+      continue;
+    }
+
+    io.to(normalizedRoomCode).emit("room:player_left", {
+      roomCode: normalizedRoomCode,
+      userId: user.id,
+      players: updatedRoom.players,
+    });
+    emitRoomState(io, normalizedRoomCode, updatedRoom);
+  }
 }
 
 export function registerGameSocketHandlers(io: Server) {
@@ -131,11 +176,6 @@ export function registerGameSocketHandlers(io: Server) {
     const authedSocket = socket as AuthenticatedSocket;
 
     authedSocket.on("room:join", ({ roomCode }: JoinRoomPayload) => {
-      // When a player joins the room,
-      // authenticate user
-      // verify roomCode
-      // create/update room = { code: roomCode, hostUserId: host.id, players: [host], status: "waiting",};
-
       const user = assertAuthenticatedUser(authedSocket);
       const normalizedRoomCode = roomCode?.trim().toUpperCase();
 
@@ -144,43 +184,31 @@ export function registerGameSocketHandlers(io: Server) {
         return;
       }
 
-      const existingRoom = activeRooms.get(normalizedRoomCode);
-
-      if (!existingRoom) {
-        const newRoom = buildRoomState(normalizedRoomCode, user);
-        // { code: roomCode, hostUserId: host.id, players: [host], status: "waiting",};
-        activeRooms.set(normalizedRoomCode, newRoom);
-        // {"ROOMCODE123": { code: roomCode, hostUserId: host.id, players: [host], status: "waiting"}}
-        authedSocket.join(normalizedRoomCode);
-        authedSocket.emit("room:joined", newRoom);
-        return;
-      }
-
-      const existingPlayer = existingRoom.players.find(
-        (player) => player.id === user.id,
+      const wasAlreadyInRoom = roomService.isPlayerAlreadyInRoom(
+        normalizedRoomCode,
+        user.id,
       );
 
-      if (!existingPlayer && existingRoom.players.length >= 2) {
-        authedSocket.emit("room:error", { message: "Room is full" });
-        return;
-      }
+      try {
+        const updatedRoom = roomService.joinOrCreate(normalizedRoomCode, {
+          userId: user.id,
+          username: user.username,
+        });
 
-      const updatedRoom = existingPlayer
-        ? existingRoom
-        : { ...existingRoom, players: [...existingRoom.players, user] };
+        syncActiveRoom(updatedRoom);
+        authedSocket.join(normalizedRoomCode);
+        authedSocket.emit("room:joined", updatedRoom);
 
-      activeRooms.set(normalizedRoomCode, updatedRoom);
-      authedSocket.join(normalizedRoomCode);
-      authedSocket.emit("room:joined", updatedRoom);
-
-      if (!existingPlayer) {
-        authedSocket
-          .to(normalizedRoomCode)
-          .emit("room:player_joined", {
+        if (!wasAlreadyInRoom) {
+          authedSocket.to(normalizedRoomCode).emit("room:player_joined", {
             roomCode: normalizedRoomCode,
             player: user,
             players: updatedRoom.players,
           });
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to join room";
+        authedSocket.emit("room:error", { message });
       }
     });
 
@@ -223,8 +251,8 @@ export function registerGameSocketHandlers(io: Server) {
       // winnerPlayerId: null,};
       activeGames.set(normalizedRoomCode, gameState);
 
-      const updatedRoom: RoomState = { ...room, status: "playing" };
-      activeRooms.set(normalizedRoomCode, updatedRoom);
+      const updatedRoom = roomService.updateStatus(normalizedRoomCode, "playing");
+      syncActiveRoom(updatedRoom);
 
       io.to(normalizedRoomCode).emit("game:started", gameState);
     });
@@ -251,10 +279,11 @@ export function registerGameSocketHandlers(io: Server) {
             const room = activeRooms.get(normalizedRoomCode);
 
             if (room) {
-              activeRooms.set(normalizedRoomCode, {
-                ...room,
-                status: "finished",
-              });
+              const updatedRoom = roomService.updateStatus(
+                normalizedRoomCode,
+                "finished",
+              );
+              syncActiveRoom(updatedRoom);
             }
 
             io.to(normalizedRoomCode).emit("game:finished", updatedState);
@@ -269,5 +298,15 @@ export function registerGameSocketHandlers(io: Server) {
         }
       },
     );
+
+    authedSocket.on("disconnecting", () => {
+      const user = authedSocket.data.user;
+
+      if (!user) {
+        return;
+      }
+
+      void handleRoomDisconnect(io, authedSocket, user);
+    });
   });
 }

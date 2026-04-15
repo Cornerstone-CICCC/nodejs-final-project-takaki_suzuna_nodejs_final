@@ -6,12 +6,14 @@ import authRouter from "./routes/auth/auth.routes";
 import http from "http";
 import { Server } from "socket.io";
 import { registerGameSocketHandlers } from "./sockets/game.socket";
+import roomRouter from "./routes/room/room.routes";
 
 const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
 app.use("/auth", authRouter);
+app.use("/room", roomRouter);
 
 const server = http.createServer(app);
 const io = new Server(server);
