@@ -34,11 +34,16 @@ function parseCookies(cookieHeader?: string): Record<string, string> {
   if (!cookieHeader) {
     return {};
   }
+  // session=abc123; theme=dark; lang=en
 
   return cookieHeader
     .split(";")
     .reduce<Record<string, string>>((cookies, entry) => {
       const [rawName, ...rawValueParts] = entry.trim().split("=");
+      // "session=abc=123".split("=")
+      // becomes:
+      // rawName = "session"
+      // rawValueParts = ["abc", "123"]
       if (!rawName) {
         return cookies;
       }
@@ -50,6 +55,8 @@ function parseCookies(cookieHeader?: string): Record<string, string> {
 
 async function getSocketUser(socket: Socket): Promise<SocketUser | null> {
   const cookies = parseCookies(socket.handshake.headers.cookie);
+  // socket.handshake.headers.cookie is the standard way for a server to access cookies sent by a client during the initial WebSocket handshake
+
   const token = cookies.session;
 
   if (!token) {
@@ -64,7 +71,7 @@ async function getSocketUser(socket: Socket): Promise<SocketUser | null> {
       return null;
     }
 
-    return { id: user.id, username: user.username };
+    return { id: user.id, username: user.username }; // This is the player info front-end needs
   } catch {
     return null;
   }
@@ -109,7 +116,7 @@ function buildRoomState(roomCode: string, host: Player): RoomState {
 
 export function registerGameSocketHandlers(io: Server) {
   io.use(async (socket, next) => {
-    const user = await getSocketUser(socket);
+    const user = await getSocketUser(socket); // authencticate based on jwt token attached in websocket cookies
 
     if (!user) {
       next(new Error("Unauthorized"));
@@ -124,6 +131,11 @@ export function registerGameSocketHandlers(io: Server) {
     const authedSocket = socket as AuthenticatedSocket;
 
     authedSocket.on("room:join", ({ roomCode }: JoinRoomPayload) => {
+      // When a player joins the room,
+      // authenticate user
+      // verify roomCode
+      // create/update room = { code: roomCode, hostUserId: host.id, players: [host], status: "waiting",};
+
       const user = assertAuthenticatedUser(authedSocket);
       const normalizedRoomCode = roomCode?.trim().toUpperCase();
 
@@ -171,6 +183,7 @@ export function registerGameSocketHandlers(io: Server) {
     });
 
     authedSocket.on("game:start", ({ roomCode }: JoinRoomPayload) => {
+      // When the game starts
       const user = assertAuthenticatedUser(authedSocket);
       const normalizedRoomCode = roomCode?.trim().toUpperCase();
       const room = getRoomOrEmitError(authedSocket, normalizedRoomCode);
@@ -197,6 +210,15 @@ export function registerGameSocketHandlers(io: Server) {
         normalizedRoomCode,
         room.players,
       );
+      // {
+      // roomId,boardSize,
+      // players: players.map((player) => ({ ...player })),
+      // currentTurnPlayerId:
+      // players[0].id,edges: [...createHorizontalEdges(boardSize),..createVerticalEdges(boardSize),],
+      // boxes: createBoxes(boardSize),
+      // scores: createInitialScores(players),
+      // status: "playing",
+      // winnerPlayerId: null,};
       activeGames.set(normalizedRoomCode, gameState);
 
       const updatedRoom: RoomState = { ...room, status: "playing" };

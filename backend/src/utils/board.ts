@@ -49,12 +49,7 @@ export function createBoxes(boardSize: number): Box[] {
 
   for (let row = 0; row < boardSize - 1; row += 1) {
     for (let col = 0; col < boardSize - 1; col += 1) {
-      boxes.push({
-        id: `B-${row}-${col}`,
-        row,
-        col,
-        claimedBy: null,
-      });
+      boxes.push({ id: `B-${row}-${col}`, row, col, claimedBy: null });
     }
   }
 
@@ -66,6 +61,7 @@ export function createInitialScores(players: Player[]): Record<string, number> {
     scores[player.id] = 0;
     return scores;
   }, {});
+  // This will be { "playerId123" : 0, "playerId999": 0 }
 }
 
 export function createInitialGameState(
@@ -81,6 +77,7 @@ export function createInitialGameState(
     roomId,
     boardSize,
     players: players.map((player) => ({ ...player })),
+    // This is clonging the players, not copying the same references
     currentTurnPlayerId: players[0].id,
     edges: [
       ...createHorizontalEdges(boardSize),
