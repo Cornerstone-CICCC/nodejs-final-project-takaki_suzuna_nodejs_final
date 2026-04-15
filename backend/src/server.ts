@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import authRouter from "./routes/auth/auth.routes";
 import http from "http";
 import { Server } from "socket.io";
+import { registerGameSocketHandlers } from "./sockets/game.socket";
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use("/auth", authRouter);
 
 const server = http.createServer(app);
 const io = new Server(server);
+registerGameSocketHandlers(io);
 
 const PORT = env.PORT;
 const MONGO_DB = env.DATABASE_URL;
@@ -26,7 +28,7 @@ mongoose
   .connect(MONGO_DB, { dbName: "dots_and_box" })
   .then(() => {
     console.log("\r\nMongoDB connected");
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`Server is listening on port ${PORT}\r\n`);
     });
   })
