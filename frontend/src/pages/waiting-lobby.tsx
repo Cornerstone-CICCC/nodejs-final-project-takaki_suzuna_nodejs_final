@@ -1,16 +1,17 @@
 import { useState } from "react";
 
 interface WaitingLobbyProps {
+    roomCode: string;
     onStartGame?: () => void;
 }
 
-function WaitingLobby({ onStartGame }: WaitingLobbyProps) {
+function WaitingLobby({ roomCode, onStartGame }: WaitingLobbyProps) {
     const [message, setMessage] = useState("");
     const [messages, setMessages] = useState<any[]>([]);
     const [copied, setCopied] = useState(false);
 
     const handleCopyCode = () => {
-        navigator.clipboard.writeText("DX-9921");
+        navigator.clipboard.writeText(roomCode);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
@@ -72,7 +73,7 @@ function WaitingLobby({ onStartGame }: WaitingLobbyProps) {
                             <div className="bg-surface-container-low rounded-lg px-4 md:px-6 py-3 md:py-4 flex items-center gap-3 w-full md:w-auto">
                                 <div className="flex flex-col">
                                     <span className="text-xs font-bold uppercase tracking-wider text-outline">Lobby Code</span>
-                                    <span className="text-xl md:text-2xl font-black text-primary tracking-widest">DX-9921</span>
+                                    <span className="text-xl md:text-2xl font-black text-primary tracking-widest">{roomCode}</span>
                                 </div>
                                 <button
                                     onClick={handleCopyCode}

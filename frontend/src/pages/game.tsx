@@ -3,7 +3,11 @@ import Dot from "../components/dot";
 import Line from "../components/line";
 import Box from "../components/box";
 
-function Game() {
+interface GameProps {
+    onGameEnd?: () => void;
+}
+
+function Game({ onGameEnd }: GameProps) {
     // Number of dots per side (6x6 dots)
     const size = 6;
     // Total grid size including lines (11x11 cells)
@@ -23,9 +27,14 @@ function Game() {
     const [zoomLevel, setZoomLevel] = useState(1);
     // State for turn timer
     const [timeLeft, setTimeLeft] = useState(60);
+    // State to track game winner
+    const [winner, setWinner] = useState<"P1" | "P2" | null>(null);
+    const totalBoxes = 25; // 5x5 boxes
 
     // Timer effect
     useEffect(() => {
+        if (winner) return; // Don't run timer if game is finished
+
         const timer = setInterval(() => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
@@ -39,7 +48,22 @@ function Game() {
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [currentPlayer]);
+    }, [currentPlayer, winner]);
+
+    // Check if game is finished
+    useEffect(() => {
+        if (Object.keys(boxes).length === totalBoxes && !winner) {
+            // Game finished, determine winner
+            const p1Score = scores.P1;
+            const p2Score = scores.P2;
+
+            if (p1Score > p2Score) {
+                setWinner("P1");
+            } else if (p2Score > p1Score) {
+                setWinner("P2");
+            }
+        }
+    }, [boxes, scores, winner]);
 
     // Check if a box is completed by verifying all 4 sides are drawn
     const isBoxCompleteWithLines = (
@@ -223,7 +247,7 @@ function Game() {
                                 <span className="text-primary text-lg">{scores.P1}</span>
                             </div>
                             <div className="h-2 bg-surface-container rounded-full overflow-hidden">
-                                <div className="h-full bg-primary w-2/3"></div>
+                                <div className="h-full bg-primary transition-all" style={{ width: `${(scores.P1 / totalBoxes) * 100}%` }}></div>
                             </div>
                         </div>
                         {currentPlayer === "P1" && (
@@ -323,7 +347,7 @@ function Game() {
                                 <span className="text-secondary text-lg">{scores.P2}</span>
                             </div>
                             <div className="h-2 bg-surface-container rounded-full overflow-hidden">
-                                <div className="h-full bg-secondary w-1/2"></div>
+                                <div className="h-full bg-secondary transition-all" style={{ width: `${(scores.P2 / totalBoxes) * 100}%` }}></div>
                             </div>
                         </div>
                         {currentPlayer === "P2" && (
@@ -338,7 +362,7 @@ function Game() {
                         <div className="grid grid-cols-2 gap-3">
                             <div className="bg-surface p-2 rounded-lg border border-outline-variant/10">
                                 <p className="text-[10px] uppercase font-bold text-outline">Boxes Left</p>
-                                <p className="text-lg font-black">{16 - Object.keys(boxes).length}</p>
+                                <p className="text-lg font-black">{25 - Object.keys(boxes).length}</p>
                             </div>
                             <div className="bg-surface p-2 rounded-lg border border-outline-variant/10">
                                 <p className="text-[10px] uppercase font-bold text-outline">Avg Turn</p>
@@ -370,6 +394,53 @@ function Game() {
                     <span className="text-[10px] font-bold">Profile</span>
                 </button>
             </nav>
+
+            {/* Victory Modal */}
+            {winner && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-background rounded-3xl p-8 md:p-12 w-full mx-4 md:max-w-md shadow-2xl flex flex-col items-center text-center">
+                        {/* Winner Avatar */}
+                        <div className="relative mb-6">
+                            <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-surface-container-high p-1 border-4 border-primary mb-2">
+                                <img
+                                    alt="Winner"
+                                    className="w-full h-full rounded-full bg-surface"
+                                    src={winner === "P1" ? "https://lh3.googleusercontent.com/aida-public/AB6AXuBsPiwo7nngEwamrC3JG4VzkeednjaG9ZcG9HpVBcPGVwLyOtp-WPFDA3jUxGYAZ9z5NOU-ppvdmmSmtsKoaQOXmH8PLrMJyPU_6IfPiCqfo9E1zOIV1pOtHzUjS_3kPtM4IivqGX0_oplqt22iYOwx4xqKj0B4zRXeYTc__dNIro7KnIQA93WOOJPlOkzdacGFgylQlxMc-dW2I20ABkyPdB4-xV7OjArar8ojYef5-ktafZPkphl5kSW5zMI37CkM-MGUDHqSN6E" : "https://lh3.googleusercontent.com/aida-public/AB6AXuALfWY9gF8D-O29ctnEHcl4_R9TIuqTzIR1sxV8iDOiNHYFwKVQdd3lQW0D1xeVy7rrtX9BxypytkL2sHbEMnPdNvjj2FPDDfLnvdjVlPkVHbfCd4gqhBhUP9fCQYnIhDgjU0qoxUHvU1bW-duXZguiVDZ7JrkMcMxRCgJCSqCoRZBBmtms4zolYdXfKbkcieByFIy_1500mJ8idfJ449Oeaik_y5hmgKQKorCAlUxAeqStIqImsZHTWhrhoQ6Tj0I2laA0HdXRSZo"}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Victory Text */}
+                        <h1 className={`text-4xl md:text-5xl font-black mb-2 ${winner === "P1" ? "text-primary" : "text-secondary"}`}>
+                            Victory!
+                        </h1>
+                        <p className="text-on-surface-variant text-sm md:text-base mb-6">
+                            You dominated the board
+                        </p>
+
+                        {/* Stats */}
+                        <div className="flex gap-6 md:gap-8 mb-8 w-full justify-center">
+                            <div className="flex flex-col items-center">
+                                <p className="text-[11px] md:text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-1">
+                                    Boxes Won
+                                </p>
+                                <p className={`text-3xl md:text-4xl font-black ${winner === "P1" ? "text-primary" : "text-secondary"}`}>
+                                    {Object.values(boxes).filter(owner => owner === winner).length}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Return to Lobby Button */}
+                        <button
+                            onClick={() => onGameEnd?.()}
+                            className={`w-full py-3 md:py-4 rounded-full font-bold text-lg md:text-xl text-white transition-all active:scale-95 ${winner === "P1" ? "bg-primary hover:bg-primary-dark" : "bg-secondary hover:bg-secondary-dark"
+                                }`}
+                        >
+                            Return to Lobby
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
