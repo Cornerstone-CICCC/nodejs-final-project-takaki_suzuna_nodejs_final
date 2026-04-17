@@ -79,7 +79,7 @@ const join = (roomCode: string, user: UserInput): Room => {
     throw new RoomServiceError("Room is already full", 409);
   }
 
-  room.players.push(toPlayer(user));
+  room.players.push(toPlayer(user)); // {id: user.id, username: user.username}
   room.status = room.players.length >= room.maxPlayers ? "full" : "waiting";
 
   return room;
