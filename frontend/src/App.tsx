@@ -370,6 +370,12 @@ function App() {
     setSocketRefreshKey((current) => current + 1);
   };
 
+  const handleReturnToWaitingLobby = () => {
+    setGame(null);
+    setErrorMessage("");
+    setPage("waiting-lobby");
+  };
+
   const handleLogout = async () => {
     setBusyAction("logout");
 
@@ -443,7 +449,7 @@ function App() {
           game={game}
           room={room}
           user={user}
-          onLeaveMatch={handleReturnToLobbies}
+          onLeaveMatch={handleReturnToWaitingLobby}
           onMakeMove={handleMakeMove}
         />
       )}

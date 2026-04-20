@@ -6,7 +6,7 @@ import {
   type Player,
 } from "../types/game.types";
 
-export const DEFAULT_BOARD_SIZE: BoardSize = 5;
+export const DEFAULT_BOARD_SIZE: BoardSize = 6;
 
 export function createHorizontalEdges(boardSize: number): Edge[] {
   const edges: Edge[] = [];

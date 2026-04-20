@@ -22,7 +22,7 @@ export type Box = {
 
 export type GameStatus = "waiting" | "playing" | "finished";
 
-export type BoardSize = 5;
+export type BoardSize = 6;
 
 export type GameState = {
   roomId: string;

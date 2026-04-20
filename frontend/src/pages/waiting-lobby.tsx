@@ -29,12 +29,11 @@ function WaitingLobby({
   onBack,
   onStartGame,
 }: WaitingLobbyProps) {
-  const copied = room.roomCode;
   const [host, guest] = room.players;
   const isHost = room.hostUserId === user.id;
 
   const handleCopyCode = async () => {
-    await navigator.clipboard.writeText(room.roomCode);
+    await navigator.clipboard.writeText(room.roomCode.slice(0, 8));
   };
 
   return (
@@ -76,7 +75,7 @@ function WaitingLobby({
                     Lobby Code
                   </span>
                   <span className="text-xl md:text-2xl font-black text-primary tracking-widest">
-                    {copied}
+                    {room.roomCode.slice(0, 8)}
                   </span>
                 </div>
                 <button
