@@ -5,10 +5,7 @@ import authServices from "../services/auth/auth.services";
 import roomService from "../services/room/room.service";
 import { createInitialGameState } from "../utils/board";
 import { GameLogicError, applyMove } from "../utils/gameLogic";
-import {
-  type GameState,
-  type Player,
-} from "../types/game.types";
+import { type GameState, type Player } from "../types/game.types";
 import { type Room as RoomState } from "../models/room/room.model";
 
 type SocketUser = Player;
@@ -112,17 +109,17 @@ async function handleRoomDisconnect(
   socket: AuthenticatedSocket,
   user: SocketUser,
 ) {
-  const joinedRoomCodes = [...socket.rooms].filter((room) => room !== socket.id);
+  const joinedRoomCodes = [...socket.rooms].filter(
+    (room) => room !== socket.id,
+  );
 
   for (const roomCode of joinedRoomCodes) {
     const normalizedRoomCode = roomService.normalizeCode(roomCode);
     const socketsInRoom = await io.in(normalizedRoomCode).fetchSockets();
-    const hasSameUserConnectedElsewhere = socketsInRoom.some(
-      (roomSocket) => {
-        const remoteUser = roomSocket.data.user as SocketUser | undefined;
-        return roomSocket.id !== socket.id && remoteUser?.id === user.id;
-      },
-    );
+    const hasSameUserConnectedElsewhere = socketsInRoom.some((roomSocket) => {
+      const remoteUser = roomSocket.data.user as SocketUser | undefined;
+      return roomSocket.id !== socket.id && remoteUser?.id === user.id;
+    });
 
     if (hasSameUserConnectedElsewhere) {
       continue;
@@ -197,17 +194,20 @@ export function registerGameSocketHandlers(io: Server) {
 
         syncActiveRoom(updatedRoom);
         authedSocket.join(normalizedRoomCode);
-        authedSocket.emit("room:joined", updatedRoom);
+        emitRoomState(io, normalizedRoomCode, updatedRoom);
 
         if (!wasAlreadyInRoom) {
-          authedSocket.to(normalizedRoomCode).emit("room:player_joined", {
-            roomCode: normalizedRoomCode,
-            player: user,
-            players: updatedRoom.players,
-          });
+          authedSocket
+            .to(normalizedRoomCode)
+            .emit("room:player_joined", {
+              roomCode: normalizedRoomCode,
+              player: user,
+              players: updatedRoom.players,
+            });
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Unable to join room";
+        const message =
+          error instanceof Error ? error.message : "Unable to join room";
         authedSocket.emit("room:error", { message });
       }
     });
@@ -251,7 +251,10 @@ export function registerGameSocketHandlers(io: Server) {
       // winnerPlayerId: null,};
       activeGames.set(normalizedRoomCode, gameState);
 
-      const updatedRoom = roomService.updateStatus(normalizedRoomCode, "playing");
+      const updatedRoom = roomService.updateStatus(
+        normalizedRoomCode,
+        "playing",
+      );
       syncActiveRoom(updatedRoom);
 
       io.to(normalizedRoomCode).emit("game:started", gameState);

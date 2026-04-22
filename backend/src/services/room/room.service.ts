@@ -37,7 +37,20 @@ function buildRoom(roomCode: string, host: Player): Room {
 }
 
 function getRoomOrThrow(roomCode: string): Room {
-  const room = rooms.get(normalizeRoomCode(roomCode));
+  const normalized = normalizeRoomCode(roomCode);
+
+  // Try exact match first
+  let room = rooms.get(normalized);
+
+  // If not found and code is shorter than full code, try prefix match
+  if (!room && normalized.length <= 8) {
+    for (const [storedCode, storedRoom] of rooms.entries()) {
+      if (storedCode.startsWith(normalized)) {
+        room = storedRoom;
+        break;
+      }
+    }
+  }
 
   if (!room) {
     throw new RoomServiceError("Room not found", 404);
@@ -79,7 +92,7 @@ const join = (roomCode: string, user: UserInput): Room => {
     throw new RoomServiceError("Room is already full", 409);
   }
 
-  room.players.push(toPlayer(user));
+  room.players.push(toPlayer(user)); // {id: user.id, username: user.username}
   room.status = room.players.length >= room.maxPlayers ? "full" : "waiting";
 
   return room;

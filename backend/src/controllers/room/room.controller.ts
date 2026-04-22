@@ -93,8 +93,4 @@ const getRoomInfo = async (req: Request, res: Response) => {
   }
 };
 
-export default {
-  createRoom,
-  joinRoom,
-  getRoomInfo,
-};
+export default { createRoom, joinRoom, getRoomInfo };
